@@ -1,0 +1,39 @@
+name: 'check-github-repository-update'
+description: 'check a GitHub repository update.'
+inputs:
+  repository:
+    description: 'GitHub Repository path.'
+    required: true
+  ref:
+    description: 'Ref of GitHub Repository.'
+    required: true
+  working_directory:
+    description: 'Working directory.'
+    required: true
+  command_output:
+    description: 'Path of the git log output file.'
+    required: true
+  cache_key_prefix:
+    description: 'Key prefix for cache of the git log output file.'
+    required: true
+outputs:
+  is_updated:
+    description: "If the repository is updated, true."
+    value: ${{ steps.result.outputs.is_updated }}
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v2
+      with:
+        repository: ${{ inputs.repository }}
+        path: ${{ inputs.working_directory }}
+        ref: ${{ inputs.ref }}
+    - uses: smilerobotics/actions-check-command-output-diff@v1
+      id: compare
+      with:
+        command: "cd ${{ inputs.working_directory }} && git log -1 --format='%H'"
+        command_output: ${{ inputs.command_output }}
+        cache_key_prefix: ${{ inputs.cache_key_prefix }}
+    - id: result
+      run: test "${{ steps.compare.outputs.is_same }}" == "true" && echo "::set-output name=is_updated::false" || echo "::set-output name=is_updated::true"
+      shell: bash
